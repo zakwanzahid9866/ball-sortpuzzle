@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ball Sort Puzzle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom animations and styles */
+        .ball {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.2), 
+                        0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .ball:hover {
+            transform: scale(1.1);
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.3), 
+                        0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .ball.selected {
+            transform: scale(1.3) !important;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 1),
+                        inset 0 2px 4px rgba(255, 255, 255, 0.4),
+                        0 0 40px rgba(255, 215, 0, 0.8) !important;
+            border: 4px solid rgba(255, 215, 0, 1) !important;
+            z-index: 100 !important;
+            position: relative !important;
+            animation: selectedPulse 1s infinite;
+        }
+        
+        @keyframes selectedPulse {
+            0%, 100% { 
+                box-shadow: 0 0 25px rgba(255, 215, 0, 1),
+                            0 0 40px rgba(255, 215, 0, 0.8);
+            }
+            50% { 
+                box-shadow: 0 0 35px rgba(255, 215, 0, 1),
+                            0 0 50px rgba(255, 215, 0, 1);
+            }
+        }
+        
+        .tube {
+            transition: all 0.2s ease;
+            background: linear-gradient(180deg, 
+                        rgba(173, 216, 230, 0.15) 0%, 
+                        rgba(173, 216, 230, 0.25) 50%, 
+                        rgba(173, 216, 230, 0.15) 100%);
+            border: 3px solid rgba(135, 206, 235, 0.8);
+            border-radius: 15px 15px 25px 25px;
+            box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.2),
+                        0 4px 15px rgba(0, 0, 0, 0.3),
+                        inset 0 -2px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tube::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 15%;
+            width: 25%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                        transparent 0%, 
+                        rgba(255, 255, 255, 0.3) 50%, 
+                        transparent 100%);
+            border-radius: 10px;
+        }
+        
+        .tube::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -3px;
+            right: -3px;
+            height: 20px;
+            background: linear-gradient(180deg, 
+                        rgba(135, 206, 235, 0.9) 0%, 
+                        rgba(135, 206, 235, 0.6) 100%);
+            border-radius: 15px 15px 0 0;
+            border: 3px solid rgba(100, 149, 237, 0.9);
+            border-bottom: none;
+        }
+        
+        .tube:hover {
+            transform: translateY(-2px);
+            box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.3),
+                        0 6px 20px rgba(0, 0, 0, 0.4),
+                        inset 0 -2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tube.valid-drop {
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.8),
+                        inset 0 2px 10px rgba(255, 255, 255, 0.3);
+            transform: scale(1.05) translateY(-2px);
+            border-color: rgba(34, 197, 94, 0.9);
+        }
+        
+        .tube.invalid-drop {
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.8),
+                        inset 0 2px 10px rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+            border-color: rgba(239, 68, 68, 0.9);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        .slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        .bounce-in {
+            animation: bounceIn 0.4s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Game container for ball animations */
+        #gameContainer {
+            position: relative;
+            overflow: visible;
+        }
+        
+        /* Ball movement animations */
+        .ball-moving {
+            position: absolute;
+            z-index: 1000;
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform: scale(1.2);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .ball-exit-up {
+            animation: ballExitUp 0.3s ease-out;
+        }
+        
+        .ball-enter-down {
+            animation: ballEnterDown 0.3s ease-out;
+        }
+        
+        @keyframes ballExitUp {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(-20px) scale(1.1); }
+        }
+        
+        @keyframes ballEnterDown {
+            0% { transform: translateY(-20px) scale(1.1); }
+            100% { transform: translateY(0) scale(1); }
+        }
+        .hint-glow {
+            animation: hintGlow 1.5s infinite;
+            transform: scale(1.1);
+        }
+        
+        @keyframes hintGlow {
+            0%, 100% { 
+                box-shadow: 0 0 15px rgba(255, 215, 0, 0.6),
+                            inset 0 2px 10px rgba(255, 255, 255, 0.3);
+                border-color: rgba(255, 215, 0, 0.8);
+            }
+            50% { 
+                box-shadow: 0 0 25px rgba(255, 215, 0, 0.9),
+                            inset 0 2px 10px rgba(255, 255, 255, 0.4);
+                border-color: rgba(255, 215, 0, 1);
+            }
+        }
+        
+        .hint-arrow {
+            position: absolute;
+            font-size: 2rem;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            animation: bounce 1s infinite;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .pulse-glow {
+            animation: pulseGlow 2s infinite;
+        }
+        
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        }
+        
+        /* Touch-friendly styling */
+        .touch-target {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        /* Prevent text selection */
+        .no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        
+        /* Gradient backgrounds */
+        .bg-game {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .bg-home {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+    </style>
+</head>
+<body class="no-select overflow-hidden">
+    <!-- Home/Settings Screen -->
+    <div id="homeScreen" class="w-screen h-screen flex flex-col justify-center items-center bg-home">
+        <div class="text-center p-8 fade-in">
+            <h1 class="text-6xl font-bold text-white mb-4 drop-shadow-lg">Ball Sort</h1>
+            <h2 class="text-3xl font-semibold text-white mb-8 drop-shadow-md">Puzzle</h2>
+            
+            <div class="space-y-6">
+                <button id="playButton" class="touch-target bg-white text-purple-600 font-bold text-xl px-12 py-4 rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 pulse-glow">
+                    Play Game
+                </button>
+                
+                <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-2xl p-6 space-y-4">
+                    <h3 class="text-xl font-semibold text-white">Settings & Rewards</h3>
+                    <div class="flex justify-between items-center">
+                        <span class="text-white">Sound Effects</span>
+                        <button id="soundToggle" class="w-12 h-6 bg-green-400 rounded-full relative transition-colors duration-300">
+                            <div class="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5 transition-transform duration-300"></div>
+                        </button>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-white">Vibration</span>
+                        <button id="vibrationToggle" class="w-12 h-6 bg-green-400 rounded-full relative transition-colors duration-300">
+                            <div class="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5 transition-transform duration-300"></div>
+                        </button>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-white">🪙 Coins</span>
+                        <span id="coinsDisplay" class="text-yellow-300 font-bold">0</span>
+                    </div>
+                    <button id="watchAdButton" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-full transition-all duration-300">
+                        📺 Watch Ad for 50 Coins
+                    </button>
+                    <button id="shopButton" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-full transition-all duration-300">
+                        🛍️ Shop
+                    </button>
+                </div>
+                
+                <div class="text-center">
+                    <p class="text-white text-sm opacity-80">Level: <span id="currentLevelDisplay">1</span> / 1000+</p>
+                    <p class="text-white text-sm opacity-80">Best Score: <span id="bestScoreDisplay">0</span></p>
+                    <p class="text-white text-sm opacity-80">Daily Reward: <span id="dailyRewardStatus">Available</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="w-screen h-screen flex flex-col bg-game hidden">
+        <!-- Header -->
+        <div class="flex justify-between items-center p-4 bg-black bg-opacity-20 backdrop-blur-sm">
+            <button id="backButton" class="touch-target bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-3 rounded-full transition-all duration-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </button>
+            
+            <div class="text-center">
+                <h2 class="text-xl font-bold text-white">Level <span id="levelNumber">1</span></h2>
+                <div class="flex space-x-4 text-sm text-white opacity-80">
+                    <span>Moves: <span id="movesCount">0</span></span>
+                    <span>Time: <span id="timeCount">00:00</span></span>
+                    <span>Score: <span id="scoreCount">0</span></span>
+                </div>
+            </div>
+            
+            <button id="menuButton" class="touch-target bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-3 rounded-full transition-all duration-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Game Area -->
+        <div class="flex-1 flex flex-col justify-center items-center p-4">
+            <div id="gameContainer" class="w-full max-w-lg">
+                <div id="tubesContainer" class="grid gap-4 justify-center items-end min-h-80">
+                    <!-- Tubes will be generated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex justify-center space-x-4 p-4 bg-black bg-opacity-20 backdrop-blur-sm">
+            <button id="undoButton" class="touch-target bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3 rounded-full shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                Undo
+            </button>
+            <button id="hintButton" class="touch-target bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-6 py-3 rounded-full shadow-lg transition-all duration-300">
+                💡 Hint
+            </button>
+            <button id="restartButton" class="touch-target bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-3 rounded-full shadow-lg transition-all duration-300">
+                Restart
+            </button>
+            <button id="nextButton" class="touch-target bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-full shadow-lg transition-all duration-300 hidden">
+                Next Level
+            </button>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full text-center bounce-in">
+            <div class="text-6xl mb-4">🎉</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Level Complete!</h3>
+            <div class="space-y-2 mb-6 text-gray-600">
+                <p>Moves: <span id="finalMoves" class="font-semibold">0</span></p>
+                <p>Time: <span id="finalTime" class="font-semibold">00:00</span></p>
+                <p>Score: <span id="finalScore" class="font-semibold">0</span></p>
+            </div>
+            <div class="space-y-3">
+                <button id="continueButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                    Continue
+                </button>
+                <button id="homeFromModalButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                    Home
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div id="shopModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-3xl p-6 mx-4 max-w-md w-full text-center bounce-in max-h-96 overflow-y-auto">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">🛍️ Shop</h3>
+            <div class="text-right mb-4">
+                <span class="text-lg font-semibold text-yellow-600">🪙 <span id="shopCoinsDisplay">0</span> Coins</span>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="bg-purple-50 rounded-2xl p-4">
+                    <h4 class="font-semibold text-purple-800 mb-2">Tube Themes</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="shop-item bg-blue-100 p-3 rounded-lg" data-item="theme-ocean" data-price="100">
+                            🌊 Ocean (100🪙)
+                        </button>
+                        <button class="shop-item bg-green-100 p-3 rounded-lg" data-item="theme-forest" data-price="150">
+                            🌲 Forest (150🪙)
+                        </button>
+                        <button class="shop-item bg-red-100 p-3 rounded-lg" data-item="theme-sunset" data-price="200">
+                            🌅 Sunset (200🪙)
+                        </button>
+                        <button class="shop-item bg-purple-100 p-3 rounded-lg" data-item="theme-space" data-price="300">
+                            🌌 Space (300🪙)
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-yellow-50 rounded-2xl p-4">
+                    <h4 class="font-semibold text-yellow-800 mb-2">Power-ups</h4>
+                    <div class="space-y-2">
+                        <button class="shop-item w-full bg-yellow-100 p-3 rounded-lg" data-item="undo-pack" data-price="50">
+                            ↩️ Extra Undos x5 (50🪙)
+                        </button>
+                        <button class="shop-item w-full bg-yellow-100 p-3 rounded-lg" data-item="hint-pack" data-price="75">
+                            💡 Hints x3 (75🪙)
+                        </button>
+                        <button class="shop-item w-full bg-yellow-100 p-3 rounded-lg" data-item="auto-sort" data-price="100">
+                            ✨ Auto-Sort Ball (100🪙)
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 space-y-3">
+                <button id="closeShopButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                    Close Shop
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Reward Modal -->
+    <div id="dailyRewardModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full text-center bounce-in">
+            <div class="text-6xl mb-4">🎁</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Daily Reward!</h3>
+            <div class="text-4xl mb-4">🪙</div>
+            <p class="text-lg text-gray-600 mb-6">You earned <span id="dailyRewardAmount" class="font-bold text-yellow-600">100</span> coins!</p>
+            <button id="claimDailyRewardButton" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                Claim Reward
+            </button>
+        </div>
+    </div>
+
+    <!-- Hint Request Modal -->
+    <div id="hintRequestModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full text-center bounce-in">
+            <div class="text-6xl mb-4">💡</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Need a Hint?</h3>
+            <p class="text-gray-600 mb-6">Watch a short ad to get a helpful hint for the current level!</p>
+            <div class="space-y-3">
+                <button id="watchAdForHintButton" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                    📺 Watch Ad for Hint
+                </button>
+                <button id="useStoredHintButton" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 hidden">
+                    Use Stored Hint (<span id="hintCountDisplay">0</span> available)
+                </button>
+                <button id="cancelHintButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ad Reward Modal -->
+    <div id="adRewardModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full text-center bounce-in">
+            <div class="text-6xl mb-4">📺</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Watch Ad for Reward?</h3>
+            <p class="text-gray-600 mb-6">Watch a short video ad to earn 50 coins and support the game!</p>
+            <div class="space-y-3">
+                <button id="confirmWatchAdButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                    📺 Watch Ad (50🪙)
+                </button>
+                <button id="cancelAdButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu Modal -->
+    <div id="menuModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full text-center bounce-in">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">Game Menu</h3>
+            <div class="space-y-3">
+                <button id="resumeButton" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                    Resume
+                </button>
+                <button id="restartFromMenuButton" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                    Restart Level
+                </button>
+                <button id="homeFromMenuButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-full transition-all duration-300">
+                    Home
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
